@@ -1,0 +1,15 @@
+base
+knitr
+rmdformats
+sf
+dplyr
+cartography
+cartogram
+SpatialPosition
+ggplot2
+tmap
+mapview
+leaflet
+bindrcpp
+sp
+raster

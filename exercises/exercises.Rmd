@@ -1,0 +1,652 @@
+---
+title: "Let's Practice Spatial Data and Cartography with R"
+author: "Kim A. Etienne C. Timothée G."
+date: "**SatRday Paris** February 2019"
+output:
+  unilur::tutorial_html_solution:
+    toc: true
+    toc_float: false
+    toc_depth: 1
+    suffix: ""
+    theme: journal
+    highlight: kate
+    number_sections: no
+    number_subsections: no
+---
+
+```{r knitr_init, echo=FALSE, cache=FALSE, include=FALSE}
+library(knitr)
+## Global options
+options(max.print="90")
+opts_chunk$set(echo=TRUE,
+               cache=FALSE, #TRUE
+               prompt=FALSE,
+               tidy=FALSE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=90)
+options(width = 90)
+
+# no margins
+knit_hooks$set(nm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,0,0))
+  }
+})
+
+# title margins
+knit_hooks$set(sm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,1.2,0))
+  }
+})
+
+# boxes custom
+#remotes::install_github("koncina/unilur")
+knitr::opts_template$set(alert = list(box.title = "Watch out!",
+                                      box.body = list(fill = "#ffe0d9", colour = "black"),
+                                      box.header = list(fill = "#FFAD99", colour = "black"),
+                                      box.collapse = NULL,
+                                      box.icon = "fa-exclamation-triangle"))
+knitr::opts_template$set(solution = list(box.title = "Solution",
+                                         box.body = list(fill = "#e6f6e7", colour = "black"),
+                                         box.header = list(fill = "#ace1af", colour = "black"),
+                                         box.icon = "fa-check-square",
+                                         box.collapse = TRUE))
+knitr::opts_template$set(information = list(box.title = "Information",
+                                            box.body = list(fill = "#bbe8f4", colour = "black"),
+                                            box.header = list(fill = "#64c9e6", colour = "black"),
+                                            box.icon = "fa-info-circle",
+                                            box.collapse = NULL))
+knitr::opts_template$set(clues = list(box.title = "Clues",
+                                      box.body = list(fill = "#fff9dc", colour = "black"),
+                                      box.header = list(fill = "#ffec8b", colour = "black"),
+                                      box.icon = "fa-search",
+                                      box.collapse = TRUE))
+```
+
+The main dataset used in this tutorial is about the **geolocalisation of french restaurants** in Paris. Data is extracted from an official register called [**SIRENE**](https://www.data.gouv.fr/fr/datasets/base-sirene-des-entreprises-et-de-leurs-etablissements-siren-siret/) (Computer system for the business and establishment register) managed by the French National Institute of Statistics and Economic Studies ([Insee](https://www.insee.fr/en/accueil)) and [geolocated](http://data.cquest.org/geo_sirene/last/) by [Etalab](https://www.etalab.gouv.fr/) (French task force for Open Data). This register records the civil status of all companies and their establishments (including restaurants).
+SIRENE has the advantages of being rigorous and exhaustive on the French territory.
+
+</br>
+You can download the dataset [here](https://github.com/comeetie/satRday/blob/master/exercises/data.zip?raw=true) or use R to download it in your current folder:
+```{r, eval=FALSE}
+# download the dataset
+download.file("https://github.com/comeetie/satRday/blob/master/exercises/data.zip?raw=true", 
+              destfile = "data.zip")
+# unzip
+unzip("data.zip",exdir=".") 
+```
+
+
+# Exercise 1 : Manipulate sf objects and associated data.frames
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Import the iris[^1] map layer 'iris_75.shp' of Paris.
+```
+
+
+[^1]: In French, IRIS is an acronym of ‘aggregated units for statistical information’. Their target sizes are 2000 residents per basic unit.
+
+```{block, opts.label = "clues"}
+Use `sf::st_read()`.
+```
+
+```{r, solution = TRUE}
+library(sf)
+iris_75 <- st_read("data/iris_75.shp")
+```
+
+
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+Display the basemap of Paris with `plot(iris_75)`.
+What do you notice ?
+```
+
+```{r, nm=TRUE, solution = TRUE}
+plot(iris_75)
+```
+
+```{block, solution = TRUE}
+We notice that R performs 4 graphs: one graph per variable in the sf object.
+```
+
+```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
+What is the functionality of the `sf::st_geometry()` function? What solution do you propose then?
+```
+
+```{block, solution = TRUE}
+`sf::st_geometry()` makes it possible to isolate the information contained in the 'geometry' column of the sf object. Using it, we put aside other variables (here *CODE_IRIS*, *P14_POP*, *AREA* and *CODE_COM*).
+```
+
+```{r, nm=TRUE, eval=FALSE, solution = TRUE}
+plot(st_geometry(iris_75))
+```
+
+```{r, nm=TRUE, echo=FALSE}
+plot(st_geometry(iris_75))
+```
+
+```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
+Import the layer of restaurants 'sir_75.shp' and display a map of Paris with its restaurants simply using the `plot` function. 
+```
+
+```{block, opts.label = "clues"}
+Use `sf::st_read()` and `sf::st_geometry()`. You can also customize the map using many parameters of the `plot` function: bg, col, lwd, border, pch, cex...
+```
+
+```{r, sm=TRUE, solution = TRUE}
+sir_75 <- st_read("data/sir_75.shp")
+```
+
+```{r, sm=TRUE, eval=FALSE, solution = TRUE}
+plot(st_geometry(iris_75), bg = "cornsilk", col = "lightblue", 
+     border = "white", lwd = .5)
+plot(st_geometry(sir_75), col = "red", pch = 20, cex = .2, add=TRUE)
+title("Restaurants in Paris")
+```
+
+```{r, sm=TRUE, echo=FALSE}
+plot(st_geometry(iris_75), bg = "cornsilk", col = "lightblue", 
+     border = "white", lwd = .5)
+plot(st_geometry(sir_75), col = "red", pch = 20, cex = .2, add=TRUE)
+title("Restaurants in Paris")
+```
+
+```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+Count the number of restaurants by iris. 
+```
+
+```{block, opts.label = "clues"}
+Use `sf::st_intersects()` and `sapply()`.
+```
+
+
+```{r, nm=TRUE, solution = TRUE}
+inter <- st_intersects(x = iris_75, y = sir_75)
+iris_75$RESTAU <- sapply(inter, length)
+head(iris_75)
+```
+
+
+```{block, box.title = "6", box.body = list(fill = "white"), box.icon = "fa-star"}
+Using the layer called ‘iris_75’, create a new aggregated map layer called ‘com_75’ which corresponds to ‘arrondissements’ (districts) of Paris . Also keep in this new layer the information on the population, area and number of restaurants in each district.
+```
+
+```{block, opts.label = "information"}
+The map layer called ‘iris_75’ contains the 5 digit codes of district in its variable *CODE_COM*.
+```
+
+```{block, opts.label = "clues"}
+Use the classic functions of `dplyr` package: `select`, `group_by` and `summarize`.
+These functions also work with `sf` objects.
+```
+
+```{r, nm=TRUE, eval=FALSE, solution = TRUE}
+library(dplyr)
+com_75 <- iris_75 %>%
+  group_by(CODE_COM) %>%
+  summarize(P14_POP = sum(P14_POP), 
+            AREA = sum(AREA), 
+            RESTAU = sum(RESTAU)) 
+
+plot(st_geometry(iris_75), col = "ivory3", border = "ivory1")
+plot(st_geometry(com_75), col = NA, border = "ivory4", lwd = 2, add = TRUE)
+```
+
+```{r, nm=TRUE, echo=FALSE}
+library(dplyr)
+com_75 <- iris_75 %>%
+  group_by(CODE_COM) %>%
+  summarize(P14_POP = sum(P14_POP), 
+            AREA = sum(AREA), 
+            RESTAU = sum(RESTAU)) 
+
+plot(st_geometry(iris_75), col = "ivory3", border = "ivory1")
+plot(st_geometry(com_75), col = NA, border = "ivory4", lwd = 2, add = TRUE)
+```
+
+
+
+# Exercise 2 : Static maps
+
+We would like to design a map of Paris districts which combines the number of restaurants and the number of restaurants per 10,000 inhabitants. 
+
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Data preparation:  
+
+* Load the layer called 'com75_shp' (which contains the population and the number of restaurants in each arrondissement) and create a variable called *rest_per_10k* which corresponds to the number of restaurants per 10,000 inhabitants in each territory.  
+* Create a vector of quantiles breaks of the *rest_per_10k* variable.   
+* Create the vector colors which corresponds to a the number of classes defined earlier.  
+* For ggplot2 maps, add  a variable called *typo* to 'com_75' which indicates the class of the territory according to the discretization contained in *bks* for the  *rest_per_10k* variable.  
+
+```
+
+```{block, opts.label = "information"}
+For the creation of ‘bks’ and ‘cols’, use the `getBreaks` and `carto.pal` functions of the  `cartography` package.
+For the creation of the *typo* variable, you can use the `cut` function and apply the parameters `digit.lab = 2` and `include.lowest = TRUE`.
+```
+
+```{r, solution=TRUE}
+library(sf)
+library(cartography)
+# Import data
+com_75 <- st_read("data/com_75.shp", quiet = TRUE)
+# Create the variable
+com_75$rest_per_10k <- 10000 * com_75$RESTAU / com_75$P14_POP
+# Define breaks
+bks <- getBreaks(v = com_75$rest_per_10k, method = "quantile", nclass = 4)
+# Define color palette
+# display.carto.all(n = 4)
+cols <- carto.pal("wine.pal", length(bks)-1)
+
+
+# For ggplot2 maps - Create a "typo" variable
+library(dplyr)
+com_75 <- com_75 %>%
+  mutate(typo = cut(rest_per_10k, breaks = bks,labels = paste0(round(bks[1:(length(bks)-1)])," to ",round(bks[2:length(bks)])),
+                    include.lowest = TRUE))
+```
+
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+With the help of `cartography` package, make the following map which contains in a choropleth layer the variable *rest_per_10k* and in a proportional circle layer the variable *RESTAU*. 
+You can also try to do the same map using `ggplot2` and `tmap`  packages.
+```
+
+
+#### {.tabset} 
+##### `cartography`
+
+```{r, eval=FALSE, echo=TRUE, solution=TRUE}
+# with cartography
+
+# Define plot margins
+par(mar = c(0, 0, 1.2, 0), bg = "cornsilk")
+# Plot the choropleth layer
+choroLayer(com_75, var = "rest_per_10k",
+           breaks = bks, col = cols, 
+           border = "grey", lwd = 0.5,
+           legend.pos = "topright", legend.horiz = TRUE,
+           legend.title.txt = "Number of restaurants\nper 10,000 inhabitants")
+# Plot proportionnal symbols
+propSymbolsLayer(com_75, var="RESTAU", 
+                 inches=0.25, lwd = 1,
+                 col="#ffffff90", border = "grey20",
+                 legend.pos="right", 
+                 legend.title.txt = "Number of restaurants")
+# Add a layout layer
+layoutLayer(title = "Restaurants Distribution in Paris", 
+            sources = "Insee & SIRENE, 2018",
+            author = "Kim, Tim & Comeetie, 2019", 
+            tabtitle = TRUE, 
+            col = "darkred", coltitle = "white", 
+            frame = FALSE, scale = 2)
+# Add a north (south) arrow
+north(pos = "topleft")
+```
+
+
+```{r, eval=TRUE, echo=FALSE, fig.width = 7, fig.height=4}
+# with cartography
+
+# Define plot margins
+par(mar = c(0, 0, 1.2, 0), bg = "cornsilk")
+# Plot the choropleth layer
+choroLayer(com_75, var = "rest_per_10k",
+           breaks = bks, col = cols, 
+           border = "grey", lwd = 0.5,
+           legend.pos = "topright", legend.horiz = TRUE,
+           legend.title.txt = "Number of restaurants\nper 10,000 inhabitants")
+# Plot proportionnal symbols
+propSymbolsLayer(com_75, var="RESTAU", 
+                 inches=0.25, lwd = 1,
+                 col="#ffffff90", border = "grey20",
+                 legend.pos="right", 
+                 legend.title.txt = "Number of restaurants")
+# Add a layout layer
+layoutLayer(title = "Restaurants Distribution in Paris", 
+            sources = "Insee & SIRENE, 2018",
+            author = "Kim, Tim & Comeetie, 2019", 
+            tabtitle = TRUE, 
+            col = "darkred", coltitle = "white", 
+            frame = FALSE, scale = 2)
+# Add a north (south) arrow
+north(pos = "topleft")
+```
+
+##### `ggplot2`
+
+```{r, eval=FALSE, solution=TRUE}
+# with ggplot2
+
+library(ggplot2)
+
+map_ggplot <- ggplot() +
+  geom_sf(data = com_75, aes(fill = typo), colour = "grey80") +
+  scale_fill_manual(name = "Number of restaurants\nper 10,000 inhabitants",
+                    values = cols) +
+  geom_sf(data = com_75 %>%  st_centroid(),
+          aes(size = RESTAU), fill = "#f5f5f5", color = "grey20", shape = 21, 
+          stroke = 1, alpha = 0.8, show.legend = "point") +
+  scale_size_area(max_size = 12, name = "Number of restaurants") +
+  coord_sf(crs = 2154, datum = NA,
+           xlim = st_bbox(com_75)[c(1,3)],
+           ylim = st_bbox(com_75)[c(2,4)]) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "cornsilk", color = NA), 
+        legend.position = "bottom", plot.background = element_rect(fill = "cornsilk",color=NA)) +
+  labs(title = "Restaurants Distribution in Paris",
+       caption = "Insee & SIRENE, 2018\nKim, Tim & Comeetie, 2019") +
+  guides(size = guide_legend(label.position = "bottom", title.position = "top",
+                             override.aes = list(alpha = 1, color = "#ffffff")),
+         fill = guide_legend(label.position = "bottom", title.position = "top"))
+
+plot(map_ggplot)
+```
+
+```{r, echo=FALSE}
+# with ggplot2
+
+library(ggplot2)
+
+map_ggplot <- ggplot() +
+  geom_sf(data = com_75, aes(fill = typo), colour = "grey80") +
+  scale_fill_manual(name = "Number of restaurants\nper 10,000 inhabitants",
+                    values = cols) +
+  geom_sf(data = com_75 %>%  st_centroid(),
+          aes(size = RESTAU), fill = "#f5f5f5", color = "grey20", shape = 21, 
+          stroke = 1, alpha = 0.8, show.legend = "point") +
+  scale_size_area(max_size = 12, name = "Number of restaurants") +
+  coord_sf(crs = 2154, datum = NA,
+           xlim = st_bbox(com_75)[c(1,3)],
+           ylim = st_bbox(com_75)[c(2,4)]) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "cornsilk", color = NA), 
+        legend.position = "bottom", plot.background = element_rect(fill = "cornsilk",color=NA)) +
+  labs(title = "Restaurants Distribution in Paris",
+       caption = "Insee & SIRENE, 2018\nKim, Tim & Comeetie, 2019") +
+  guides(size = guide_legend(label.position = "bottom", title.position = "top",
+                             override.aes = list(alpha = 1, color = "#ffffff")),
+         fill = guide_legend(label.position = "bottom", title.position = "top"))
+
+plot(map_ggplot)
+```
+
+
+
+##### `tmap`
+
+```{r, eval=FALSE, solution=TRUE}
+# with tmap
+
+library(tmap)
+tm_shape(com_75) +
+  tm_polygons("rest_per_10k", 
+              breaks = bks,
+              palette=cols, title = "Number of restaurants\nper 10,000 inhabitants") +
+  tm_symbols(size = "RESTAU", col = "white",
+             alpha = 0.5, scale = 3,
+             title.size = "Number of Restaurants") +
+  tm_layout(title = "Restaurants Distribution in Paris", 
+            title.position = c("left", "top"), 
+            legend.position = c("right", "top"), 
+            frame = T, 
+            inner.margins = c(0, 0, 0.1, 0)) + 
+  tm_compass(type = "arrow", position = c("left", "top")) +
+  tm_scale_bar(position = c("left", "bottom"), breaks = c(0,1,2)) + 
+  tm_credits("Insee & SIRENE, 2018
+Kim, Tim & Comeetie, 2019", position = c("left", "bottom"))
+```
+
+```{r, echo=FALSE}
+# with tmap
+
+library(tmap)
+tm_shape(com_75) +
+  tm_polygons("rest_per_10k", 
+              breaks = bks,
+              palette=cols, title = "Number of restaurants\nper 10,000 inhabitants") +
+  tm_symbols(size = "RESTAU", col = "white",
+             alpha = 0.5, scale = 3,
+             title.size = "Number of Restaurants") +
+  tm_layout(title = "Restaurants Distribution in Paris", 
+            title.position = c("left", "top"), 
+            legend.position = c("right", "top"), 
+            frame = T, 
+            inner.margins = c(0, 0, 0.1, 0)) + 
+  tm_compass(type = "arrow", position = c("left", "top")) +
+  tm_scale_bar(position = c("left", "bottom"), breaks = c(0,1,2)) + 
+  tm_credits("Insee & SIRENE, 2018
+Kim, Tim & Comeetie, 2019", position = c("left", "bottom"))
+```
+
+# Exercise 3 : Interactive maps and OSM data
+
+In this exercise we will use `mapview` and `leaflet` to explore two data sources on restaurants: 
+
+* SIRENE which we already used previously 
+* OSM thanks to the `osmdata` package.
+
+```{block, box.title = "1", box.body = list(fill = "white"), box.icon = "fa-star"}
+Load the dataset ‘sir_75’ used previously and map the more than 23,000 restaurants of Paris with the `mapview` package. Try using different parameters to customize your map.
+```
+
+```{block, opts.label = "information"}
+For example, you can use the `map.types`, `col.regions`, `label`, `color`, `legend`, `layer.name`, `homebutton`, `lwd` ... parameters of the `mapview` function.
+```
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(mapview)
+library(sf)
+
+sir_75 <- st_read("data/sir_75.shp")
+mapview(sir_75, map.types = "OpenStreetMap",
+        col.regions = "#940000",
+        label = sir_75$L1_NORM,
+        color = "white", legend = TRUE, layer.name = "Restaurants in SIRENE",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(mapview)
+library(sf)
+
+mapview(sir_75, map.types = "OpenStreetMap",
+        col.regions = "#940000",
+        label = sir_75$L1_NORM,
+        color = "white", legend = TRUE, layer.name = "Restaurants in SIRENE",
+        homebutton = FALSE, lwd = 0.2)
+```
+
+```{block, box.title = "2", box.body = list(fill = "white"), box.icon = "fa-star"}
+Use the ‘iris_75’ polygons to extract a bounding box for Paris in WGS84 projection.
+
+Then take advantage of the `osmdata` package to retrieve all the restaurants and fast-foods inside this bounding box. For this, use the two ‘key:value’ pairs  ‘amenity:restaurants’ and ‘amenity:fast_food’.
+
+Store the results in a variable called *restaurants*.
+
+```
+
+```{block, opts.label = "clues"}
+Use `sf::st_bbox()` and `sf::st_transform()` for extracting the bounding box. The epsg code of WGS84 is 4326.
+
+Use: 
+
+* `osmdata:opq()` to define the bounding box of the osm request
+* `osmdata:add_osm_feature()` to define the key:value pairs you are looking for 
+* `osmdata:osmdata_sf()` to retrieve the osm data.
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=TRUE, solution=TRUE}
+library(osmdata)
+
+bb      <- iris_75 %>% st_transform(4326) %>% st_bbox()
+q       <- opq(bbox = bb,timeout = 180)
+qr      <- add_osm_feature(q, key = 'amenity',value = 'restaurant')
+qff     <- add_osm_feature(q, key = 'amenity',value = 'fast_food')
+
+restaurants <- c(osmdata_sf(qr),osmdata_sf(qff))
+                 
+```
+
+```{block, box.title = "3", box.body = list(fill = "white"), box.icon = "fa-star"}
+Use the following code to clean the results and project them in Lambert93.
+
+This code: 
+
+* removes the duplicated geometries thanks to `osmdata::unique_osmdata` (see the documentation for details)
+* projets in Lambert 93
+* keeps the *name* attribute only
+* computes the centroids for the restaurants stored as polygons 
+
+Eventually, the restaurants outside Paris are removed.
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=TRUE}
+
+restaurants_dedup <- unique_osmdata(restaurants)
+
+rpoint <- restaurants_dedup$osm_points %>% 
+  filter(!is.na(amenity)) %>% 
+  st_transform(2154) %>% select(name) 
+
+rpoly  <- restaurants_dedup$osm_polygons %>% 
+  st_transform(2154) %>% 
+  select(name)  %>% st_centroid()
+
+restaurants_osm <- rbind(rpoly,rpoint)   
+
+osm_75 <- st_intersection(restaurants_osm , iris_75 %>% st_geometry() %>% st_union())
+```
+
+
+```{block, box.title = "4", box.body = list(fill = "white"), box.icon = "fa-star"}
+Display two `mapview` maps: 
+
+* one with restaurants stored in sir_75
+* another one with restaurants extracted from OSM.
+
+Use the `mapview::sync` function to display both maps side by side with synchronisation.  
+```
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(mapview)
+
+
+map_osm = mapview(osm_75, map.types = "OpenStreetMap", 
+        col.regions = "#940000", 
+        label = as.character(osm_75$name), 
+        color = "white", legend = FALSE, layer.name = "Restaurants in OSM",
+        homebutton = FALSE, lwd = 0.5) 
+
+map_sir = mapview(sir_75, map.types = "OpenStreetMap", 
+        col.regions = "#940000", 
+        label = sir_75$L2_NORMA, 
+        color = "white", legend = TRUE, layer.name = "Restaurants in SIRENE",
+        homebutton = FALSE, lwd = 0.5) 
+
+sync(map_osm,map_sir)
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(mapview)
+
+
+map_osm = mapview(osm_75, map.types = "OpenStreetMap", 
+        col.regions = "#940000", 
+        label = as.character(osm_75$name), 
+        color = "white", legend = FALSE, layer.name = "Restaurants in OSM",
+        homebutton = FALSE, lwd = 0.5) 
+
+map_sir = mapview(sir_75, map.types = "OpenStreetMap", 
+        col.regions = "#940000", 
+        label = sir_75$L2_NORMA, 
+        color = "white", legend = TRUE, layer.name = "Restaurants in SIRENE",
+        homebutton = FALSE, lwd = 0.5) 
+
+sync(map_osm,map_sir)
+```
+
+## Bonus : find location to improve osm data
+
+
+```{block, box.title = "5", box.body = list(fill = "white"), box.icon = "fa-star"}
+For both datasets, use the `pt_in_grid` function below to count the number of restaurants per grid cell of 500 square meters.
+
+Then, merge the two resulting grids to compute the number of restaurants missing in OSM compared to the number of restaurants in SIRENE data (which is supposed to be exhaustive on the French territory). 
+
+Use `leaflet` to draw a gridded choropleth.
+```
+
+```{r, nm=TRUE, eval=TRUE, echo=TRUE}
+pt_in_grid <- function(feat, adm, cellsize = 1000){
+  grid <- st_make_grid(x = adm, cellsize = cellsize, what = "polygons")
+  . <- st_intersects(grid, adm)
+  grid <- grid[sapply(X = ., FUN = length)>0]
+  . <- st_intersects(grid, feat)
+  grid <- st_sf(n = sapply(X = ., FUN = length), grid)
+  return(grid)
+}
+```
+
+
+```{r, nm=TRUE, eval=FALSE, echo=TRUE, solution=TRUE}
+library(leaflet)
+gr_osm <- pt_in_grid(osm_75,iris_75,500)
+gr_sir <- pt_in_grid(sir_75,iris_75,500)
+
+grid <- gr_osm %>% rename(osm=n) %>% 
+  mutate(siren = gr_sir$n) %>% 
+  filter(siren==0,osm==0) %>%
+  mutate(missing =  pmax(siren - osm,0))
+
+
+bks = c(0,5,10,20,40,80,160,300)
+cols <- carto.pal("green.pal", 7)
+color.scale <- colorBin(cols, domain = range(bks), bins=bks)
+leaflet(grid  %>% st_transform(4326) %>% filter(!is.na(missing))) %>% 
+  addProviderTiles(providers$Stamen.TonerLite) %>% 
+  addPolygons(fillColor = ~color.scale(missing), stroke = FALSE, fillOpacity = 0.7) %>% 
+  addLegend(colors = cols, labels = round(bks[1:(length(bks)-1)]*10)/10,
+            title = "# net difference between</br> restaurants in </br>SIRENE and OSM")
+
+
+```
+
+
+```{r, nm=TRUE, eval=TRUE, echo=FALSE}
+library(leaflet)
+gr_osm <- pt_in_grid(osm_75,iris_75,500)
+gr_sir <- pt_in_grid(sir_75,iris_75,500)
+
+grid <- gr_osm %>% rename(osm=n) %>% 
+  mutate(siren = gr_sir$n) %>% 
+  mutate(missing =  pmax(siren - osm,0))
+
+
+bks = c(0,5,10,20,40,80,160,300)
+cols <- carto.pal("green.pal", 7)
+color.scale <- colorBin(cols, domain = range(bks), bins=bks)
+leaflet(grid  %>% st_transform(4326) %>% filter(!is.na(missing))) %>% addProviderTiles(providers$Stamen.TonerLite) %>% 
+  addPolygons(fillColor = ~color.scale(missing), stroke = FALSE, fillOpacity = 0.7) %>% 
+  addLegend(colors = cols, labels = round(bks[1:(length(bks)-1)]*10)/10,
+            title = "# net difference between</br> restaurants in </br>SIRENE and OSM")
+
+
+```
+
+
+--------------------------------------------
+
+--------------------------------------------
+
+**reproducibility**
+
+```{r}
+sessionInfo()
+```
+
